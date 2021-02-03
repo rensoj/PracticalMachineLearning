@@ -1,0 +1,60 @@
+---
+title: "Practical Machine Learning Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Summary 
+
+In this project, we use a random forest to train a prediction model to the provided barbell excercise data. **The random forest algorithm is chosen because it is both relatively accurate and reletively easy to use compared to other methods.**  K-fold cross validation is used to verify the accuracy of the model, and the model is applied to a testing data set.
+
+# Data Cleaning
+
+First we load the training and testing data sets.  In order to choose which variables we will use, we calculate the proportion of NA entries for each variable and choose those that have at least 30% complete.  Also, the first seven varables seem to be associated with tracking the experiments rather than providing data, so those are deleted as well.  Lastly, we convert the "classe" variable from character to a factor.
+
+```{r}
+suppressMessages(library(tidyverse))
+suppressMessages(library(caret))
+if (!(exists("training",envir=.GlobalEnv) & exists("testing",envir=.GlobalEnv))){
+     training <- tibble(read.csv("./pml-training.csv",stringsAsFactors=FALSE,na.strings=c("",NA)))
+     testing <- tibble(read.csv("./pml-testing.csv",stringsAsFactors=FALSE,na.strings=c("",NA)))
+     pct <- sapply(training,function(x){sum(!is.na(x))/length(x)})
+     training <- training[,pct > 0.3];testing <- testing[,pct > 0.3]
+     training <- training[,-(1:7)];testing <- testing[,-(1:7)]
+     training$classe <- factor(training$classe)
+     assign("training",training,envir=.GlobalEnv)
+     assign("testing",testing,envir=.GlobalEnv)
+}
+```
+
+# Model Fitting
+
+To create our model, we will use a random forest with 5-fold cross-validation.  So that the model need not be recomputed if it is needed later, it is saved as a .rds file.
+
+```{r}
+set.seed(254)
+
+TrainCtrl <- trainControl(method="cv",number=5)
+
+#Fit1 <- train(classe ~ .,method="rf",data=training,trControl=TrainCtrl)
+#saveRDS(Fit1,file="~/Desktop/FitSave.rds")
+Fit1 <- readRDS("~/Desktop/FitSave.rds")
+
+print(Fit1)
+```     
+
+As the cross-validation results show, the model appears to be quite accurate.
+
+# Testing
+
+We now apply the model to the testing data.  The data below agree with the answers for the Prediction Quiz, which should indicate that the predictions are accurate.
+
+```{r}
+Pred <- predict(Fit1,testing)
+print(Pred)
+```
+
+**Based on the results in this analysis, I expect that the out-of-sample error will be fairly low, perhaps in the 1%-2% range when applied more widely.**
